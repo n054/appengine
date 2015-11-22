@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Appengine by n054</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Appengine</h1>
+      <h2 class="project-tagline">Go App Engine packages</h2>
+      <a href="https://github.com/n054/appengine" class="btn">View on GitHub</a>
+      <a href="https://github.com/n054/appengine/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/n054/appengine/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="go-app-engine-packages" class="anchor" href="#go-app-engine-packages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Go App Engine packages</h1>
+
+<p><a href="https://travis-ci.org/golang/appengine"><img src="https://travis-ci.org/golang/appengine.svg" alt="Build Status"></a></p>
+
+<p>This repository supports the Go runtime on App Engine,
+including both classic App Engine and Managed VMs.
+It provides APIs for interacting with App Engine services.
+Its canonical import path is <code>google.golang.org/appengine</code>.</p>
+
+<p>See <a href="https://cloud.google.com/appengine/docs/go/">https://cloud.google.com/appengine/docs/go/</a>
+for more information.</p>
+
+<p>File issue reports and feature requests on the <a href="https://code.google.com/p/googleappengine/issues/entry?template=Go%20defect">Google App Engine issue
+tracker</a>.</p>
+
+<h2>
+<a id="directory-structure" class="anchor" href="#directory-structure" aria-hidden="true"><span class="octicon octicon-link"></span></a>Directory structure</h2>
+
+<p>The top level directory of this repository is the <code>appengine</code> package. It
+contains the
+basic APIs (e.g. <code>appengine.NewContext</code>) that apply across APIs. Specific API
+packages are in subdirectories (e.g. <code>datastore</code>).</p>
+
+<p>There is an <code>internal</code> subdirectory that contains service protocol buffers,
+plus packages required for connectivity to make API calls. App Engine apps
+should not directly import any package under <code>internal</code>.</p>
+
+<h2>
+<a id="updating-a-go-app-engine-app" class="anchor" href="#updating-a-go-app-engine-app" aria-hidden="true"><span class="octicon octicon-link"></span></a>Updating a Go App Engine app</h2>
+
+<p>This section describes how to update a traditional Go App Engine app to use
+these packages.</p>
+
+<h3>
+<a id="1-update-yaml-files-managed-vms-only" class="anchor" href="#1-update-yaml-files-managed-vms-only" aria-hidden="true"><span class="octicon octicon-link"></span></a>1. Update YAML files (Managed VMs only)</h3>
+
+<p>The <code>app.yaml</code> file (and YAML files for modules) should have these new lines added:</p>
+
+<pre><code>vm: true
+manual_scaling:
+  instances: 1
+</code></pre>
+
+<p>See <a href="https://cloud.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_class">https://cloud.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_class</a> for details.</p>
+
+<h3>
+<a id="2-update-import-paths" class="anchor" href="#2-update-import-paths" aria-hidden="true"><span class="octicon octicon-link"></span></a>2. Update import paths</h3>
+
+<p>The import paths for App Engine packages are now fully qualified, based at <code>google.golang.org/appengine</code>.
+You will need to update your code to use import paths starting with that; for instance,
+code importing <code>appengine/datastore</code> will now need to import <code>google.golang.org/appengine/datastore</code>.
+You can do that manually, or by running this command to recursively update all Go source files in the current directory:
+(may require GNU sed)</p>
+
+<pre><code>sed -i '/"appengine/{s,"appengine,"google.golang.org/appengine,;s,appengine_,appengine/,}' \
+  $(find . -name '*.go')
+</code></pre>
+
+<h3>
+<a id="3-update-code-using-deprecated-removed-or-modified-apis" class="anchor" href="#3-update-code-using-deprecated-removed-or-modified-apis" aria-hidden="true"><span class="octicon octicon-link"></span></a>3. Update code using deprecated, removed or modified APIs</h3>
+
+<p>Most App Engine services are available with exactly the same API.
+A few APIs were cleaned up, and some are not available yet.
+This list summarises the differences:</p>
+
+<ul>
+<li>
+<code>appengine.Context</code> has been replaced with the <code>Context</code> type from <code>golang.org/x/net/context</code>.</li>
+<li>Logging methods that were on <code>appengine.Context</code> are now functions in <code>google.golang.org/appengine/log</code>.</li>
+<li>
+<code>appengine.Timeout</code> has been removed. Use <code>context.WithTimeout</code> instead.</li>
+<li>
+<code>appengine.Datacenter</code> now takes a <code>context.Context</code> argument.</li>
+<li>
+<code>datastore.PropertyLoadSaver</code> has been simplified to use slices in place of channels.</li>
+<li>
+<code>delay.Call</code> now returns an error.</li>
+<li>
+<code>search.FieldLoadSaver</code> now handles document metadata.</li>
+<li>
+<code>urlfetch.Transport</code> no longer has a Deadline field; set a deadline on the
+<code>context.Context</code> instead.</li>
+<li>
+<code>aetest</code> no longer declares its own Context type, and uses the standard one instead.</li>
+<li>
+<code>taskqueue.QueueStats</code> no longer takes a maxTasks argument. That argument has been
+deprecated and unused for a long time.</li>
+<li>
+<code>appengine/cloudsql</code> has not been ported yet.</li>
+<li>
+<code>appengine.BackendHostname</code> and <code>appengine.BackendInstance</code> were for the deprecated backends feature.
+Use <code>appengine.ModuleHostname</code>and <code>appengine.ModuleName</code> instead.</li>
+<li>
+<code>appengine.IsCapabilityDisabled</code> and <code>appengine/capability</code> are obsolete.</li>
+<li>Most of <code>appengine/file</code> and parts of <code>appengine/blobstore</code> are deprecated.
+Use <a href="https://godoc.org/google.golang.org/cloud/storage">Google Cloud Storage</a> instead.</li>
+<li>
+<code>appengine/socket</code> is not required on Managed VMs. Use the standard <code>net</code> package instead.</li>
+</ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/n054/appengine">Appengine</a> is maintained by <a href="https://github.com/n054">n054</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
